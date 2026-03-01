@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TellMeApp </title>
+<title>TellMeApp Pro v2</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -12,36 +12,53 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
-body{background:#f0f2f5;height:100vh;display:flex;justify-content:center;align-items:center;transition:.3s}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial, sans-serif}
+body{background:#f0f2f5;transition:.3s;display:flex;flex-direction:column;min-height:100vh}
 
-.auth{background:#fff;padding:25px;border-radius:12px;width:320px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
+/* AUTH */
+.auth{background:#fff;padding:25px;border-radius:12px;width:90%;max-width:350px;box-shadow:0 10px 25px rgba(0,0,0,.2);margin:50px auto;transition:.3s}
 .auth input,.chat-input input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ccc}
-button{padding:8px 12px;border:none;border-radius:8px;background:#5865f2;color:#fff;cursor:pointer}
+.auth button{width:100%;padding:10px;margin-top:8px;border:none;border-radius:8px;background:#5865f2;color:#fff;font-weight:600;cursor:pointer}
+.switch{font-size:13px;color:#5865f2;cursor:pointer;text-align:center;margin-top:10px}
 
-.chat{display:none;width:95%;max-width:1100px;height:92vh;background:#fff;border-radius:12px;overflow:hidden}
-.sidebar{width:30%;background:#f5f6fa;padding:10px;overflow-y:auto}
-.chatbox{width:70%;display:flex;flex-direction:column}
-.topbar{background:#5865f2;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center}
-.messages{flex:1;padding:15px;overflow-y:auto;background:#eef1f7}
-.msg{margin:6px 0;padding:8px 12px;border-radius:10px;max-width:70%;word-wrap:break-word}
-.me{background:#5865f2;color:#fff;margin-left:auto}
-.other{background:#fff}
-.chat-input{display:flex;padding:10px;border-top:1px solid #ddd;gap:5px}
-.chat-input input{flex:1}
-.user{padding:8px;background:#fff;margin-bottom:6px;border-radius:6px;cursor:pointer}
-#typing{font-size:12px;color:#999;padding-left:10px}
+/* Chat */
+.chat{display:none;flex:1;display:flex;width:100%;max-width:1200px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;flex-direction:row;box-shadow:0 10px 25px rgba(0,0,0,.15)}
+.sidebar{width:25%;background:#f5f6fa;padding:10px;overflow-y:auto;min-width:200px;transition:.3s}
+.chatbox{flex:1;display:flex;flex-direction:column}
+.topbar{background:#5865f2;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.messages{flex:1;padding:15px;overflow-y:auto;background:#eef1f7;display:flex;flex-direction:column}
+.msg{margin:6px 0;padding:10px 15px;border-radius:12px;max-width:70%;word-wrap:break-word;line-height:1.4;position:relative}
+.msg.me{background:#5865f2;color:#fff;margin-left:auto}
+.msg.other{background:#fff}
+.msg .seen{font-size:10px;color:#999;position:absolute;bottom:2px;right:5px}
+.chat-input{display:flex;padding:10px;border-top:1px solid #ddd;gap:5px;flex-wrap:wrap}
+.chat-input input{flex:1;min-width:100px}
+.chat-input button{padding:8px 12px;border:none;border-radius:8px;background:#5865f2;color:#fff;cursor:pointer;white-space:nowrap}
+.user{padding:8px;background:#fff;margin-bottom:6px;border-radius:6px;cursor:pointer;transition:.2s}
+.user:hover{background:#dcdde1}
+#typing{font-size:12px;color:#999;padding-left:10px;margin-bottom:5px}
 
+/* Dark mode */
 .dark{background:#111;color:#fff}
 .dark .chat{background:#1e1e1e}
 .dark .messages{background:#121212}
 .dark .sidebar{background:#1a1a1a}
+.dark .msg.me{background:#7289da;color:#fff}
+.dark .msg.other{background:#2c2f33;color:#fff}
+.dark .chat-input input{background:#222;color:#fff;border:1px solid #444}
+.dark .chat-input button{background:#7289da}
 
-.switch{font-size:13px;color:#5865f2;cursor:pointer;text-align:center;margin-top:5px}
+/* Emoji row */
+.emoji-row{padding:5px;display:flex;gap:5px;flex-wrap:wrap}
 
-@media(max-width:768px){
-.sidebar{display:none}
-.chatbox{width:100%}
+/* Responsive */
+@media(max-width:900px){
+.chat{flex-direction:column;height:100vh;border-radius:0}
+.sidebar{width:100%;max-height:150px;display:flex;overflow-x:auto}
+.user{flex:0 0 auto}
+.chatbox{width:100%;flex:1}
+.topbar{flex-direction:column;align-items:flex-start}
+.chat-input{flex-direction:column;gap:5px}
 }
 </style>
 </head>
@@ -61,19 +78,19 @@ button{padding:8px 12px;border:none;border-radius:8px;background:#5865f2;color:#
 <div class="sidebar">
 <h3>🟢 Users</h3>
 <div id="users"></div>
-<button onclick="toggleDark()">🌙 Dark</button>
+<button onclick="toggleDark()">🌙 Dark Mode</button>
 </div>
 
 <div class="chatbox">
 <div class="topbar">
-<span id="chatWith">TellMeApp</span>
+<span id="chatWith">Global Chat</span>
 <button onclick="logout()">Logout</button>
 </div>
 
 <div id="typing"></div>
 <div class="messages" id="msgs"></div>
 
-<div style="padding:5px">
+<div class="emoji-row">
 <button onclick="addEmoji('😀')">😀</button>
 <button onclick="addEmoji('😂')">😂</button>
 <button onclick="addEmoji('❤️')">❤️</button>
@@ -95,17 +112,16 @@ button{padding:8px 12px;border:none;border-radius:8px;background:#5865f2;color:#
 </audio>
 
 <script>
-/* 🔥 YOUR FIREBASE CONFIG */
+/* 🔥 Firebase config */
 const firebaseConfig = {
-  apiKey: "AIzaSyDcndhppj9OvfLZ3AFqlbiiiiPc51SM1Z8",
-  authDomain: "tellmeapp-622bc.firebaseapp.com",
-  projectId: "tellmeapp-622bc",
-  storageBucket: "tellmeapp-622bc.firebasestorage.app",
-  messagingSenderId: "689055616169",
-  appId: "1:689055616169:web:0d5723247079480197adb8",
-  measurementId: "G-WS1C757NC9"
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  databaseURL: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 };
-
 firebase.initializeApp(firebaseConfig);
 const authFB=firebase.auth();
 const db=firebase.database();
@@ -116,7 +132,7 @@ let currentRoom="global";
 let typingRef=null;
 let isLogin=true;
 
-/* TOGGLE LOGIN/REGISTER */
+/* Toggle login/register */
 function toggleMode(){
 isLogin=!isLogin;
 authTitle.innerText=isLogin?"Login":"Register";
@@ -129,12 +145,10 @@ function handleAuth(){
 const e=email.value.trim();
 const p=password.value.trim();
 if(!e||!p) return alert("Fill all fields");
-
 if(isLogin){
 authFB.signInWithEmailAndPassword(e,p).catch(err=>alert(err.message));
 }else{
 authFB.createUserWithEmailAndPassword(e,p).catch(err=>alert(err.message));
-}
 }
 
 /* AUTH STATE */
@@ -167,9 +181,13 @@ users.innerHTML=html;
 
 /* PRIVATE CHAT */
 function privateChat(u){
-if(u===me) return;
+if(u===me){
+currentRoom="global";
+chatWith.innerText="Global Chat";
+}else{
 currentRoom=[me,u].sort().join("_");
 chatWith.innerText="Chat with "+u;
+}
 loadMessages();
 watchTyping();
 }
@@ -181,17 +199,23 @@ const fileObj=file.files[0];
 if(!text && !fileObj) return;
 
 let fileURL=null;
+let isVoice=false;
+
 if(fileObj){
-const ref=storage.ref("files/"+Date.now()+fileObj.name);
-await ref.put(fileObj);
-fileURL=await ref.getDownloadURL();
-}
-
+const reader = new FileReader();
+reader.onload = async e=>{
+fileURL = e.target.result;
 const msgRef=db.ref("messages/"+currentRoom).push();
-msgRef.set({user:me,text:text||"",file:fileURL||"",time:Date.now(),seen:false});
-
+msgRef.set({user:me,text:text||"",file:fileURL,voice:isVoice,time:Date.now(),seen:false});
+msg.value="";file.value="";
+};
+reader.readAsDataURL(fileObj);
+}else{
+const msgRef=db.ref("messages/"+currentRoom).push();
+msgRef.set({user:me,text:text||"",file:"",voice:isVoice,time:Date.now(),seen:false});
 msg.value="";
 file.value="";
+}
 }
 
 /* LOAD MSG */
@@ -201,25 +225,15 @@ db.ref("messages/"+currentRoom).on("value",snap=>{
 msgs.innerHTML="";
 snap.forEach(s=>{
 const m=s.val();
-
-if(m.user!==me){
-db.ref("messages/"+currentRoom+"/"+s.key+"/seen").set(true);
-}
-
+if(m.user!==me){db.ref("messages/"+currentRoom+"/"+s.key+"/seen").set(true);}
 let seenMark=(m.user===me && m.seen)?" ✔✔":"";
 let content="<b>"+m.user+":</b> "+m.text+seenMark;
-
-if(m.voice){
-content+=`<br><audio controls src="${m.file}"></audio>`;
-}else if(m.file){
-content+=`<br><a href="${m.file}" target="_blank">📎 File</a>`;
-}
-
+if(m.voice){content+=`<br><audio controls src="${m.file}"></audio>`;}
+else if(m.file){content+=`<br><img src="${m.file}" style="max-width:200px;border-radius:8px;">`;}
 const div=document.createElement("div");
 div.className="msg "+(m.user===me?"me":"other");
 div.innerHTML=content;
 msgs.appendChild(div);
-
 if(m.user!==me) ping.play();
 });
 msgs.scrollTop=msgs.scrollHeight;
@@ -232,15 +246,12 @@ if(!typingRef) typingRef=db.ref("typing/"+currentRoom+"/"+me);
 typingRef.set(true);
 setTimeout(()=>typingRef.set(false),1500);
 });
-
 function watchTyping(){
 db.ref("typing/"+currentRoom).off();
 db.ref("typing/"+currentRoom).on("value",snap=>{
 let txt="";
 snap.forEach(s=>{
-if(s.key!==me && s.val()===true){
-txt=s.key+" is typing...";
-}
+if(s.key!==me && s.val()===true){txt=s.key+" is typing...";}
 });
 typing.innerText=txt;
 });
@@ -258,16 +269,19 @@ recorder.ondataavailable=e=>audioChunks.push(e.data);
 recorder.onstop=async()=>{
 const blob=new Blob(audioChunks,{type:'audio/mp3'});
 audioChunks=[];
-const ref=storage.ref("voice/"+Date.now()+".mp3");
-await ref.put(blob);
-const url=await ref.getDownloadURL();
-db.ref("messages/"+currentRoom).push({user:me,text:"",file:url,voice:true,time:Date.now(),seen:false});
+const reader = new FileReader();
+reader.onload = async ev=>{
+const url=ev.target.result;
+const msgRef=db.ref("messages/"+currentRoom).push();
+msgRef.set({user:me,text:"",file:url,voice:true,time:Date.now(),seen:false});
+};
+reader.readAsDataURL(blob);
 };
 recorder.start();
 setTimeout(()=>recorder.stop(),4000);
 }
 
-/* DARK */
+/* DARK MODE */
 function toggleDark(){document.body.classList.toggle("dark");}
 
 /* LOGOUT */
