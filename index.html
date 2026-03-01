@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TellMeApp Ultimate</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{background:#f0f2f5;height:100vh;display:flex;justify-content:center;align-items:center;transition:.3s}
+
+.auth{background:#fff;padding:25px;border-radius:12px;width:320px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
+
+.auth input,.chat-input input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ccc}
+
+button{padding:8px 12px;border:none;border-radius:8px;background:#5865f2;color:#fff;cursor:pointer}
+
+.chat{display:none;width:95%;max-width:1100px;height:92vh;background:#fff;border-radius:12px;overflow:hidden}
+
+.sidebar{width:30%;background:#f5f6fa;padding:10px;overflow-y:auto}
+.chatbox{width:70%;display:flex;flex-direction:column}
+
+.topbar{background:#5865f2;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center}
+
+.messages{flex:1;padding:15px;overflow-y:auto;background:#eef1f7}
+
+.msg{margin:6px 0;padding:8px 12px;border-radius:10px;max-width:70%;word-wrap:break-word}
+.me{background:#5865f2;color:#fff;margin-left:auto}
+.other{background:#fff}
+
+.chat-input{display:flex;padding:10px;border-top:1px solid #ddd;gap:5px}
+.chat-input input{flex:1}
+
+.user{padding:8px;background:#fff;margin-bottom:6px;border-radius:6px;cursor:pointer}
+
+#typing{font-size:12px;color:#999;padding-left:10px}
+
+.dark{background:#111;color:#fff}
+.dark .chat{background:#1e1e1e}
+.dark .messages{background:#121212}
+.dark .sidebar{background:#1a1a1a}
+
+@media(max-width:768px){
+.sidebar{display:none}
+.chatbox{width:100%}
+}
+
+@media(max-width:480px){
+.msg{max-width:85%}
+.messages{font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="auth" id="auth">
+<h2>TellMeApp</h2>
+<input id="name" placeholder="Your name">
+<button onclick="login()">Enter Chat</button>
+</div>
+
+<!-- CHAT -->
+<div class="chat" id="chat">
+<div class="sidebar">
+<h3>🟢 Users</h3>
+<div id="users"></div>
+<button onclick="toggleDark()">🌙 Dark</button>
+</div>
+
+<div class="chatbox">
+<div class="topbar">
+<span id="chatWith">Global Chat</span>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div id="typing"></div>
+
+<div class="messages" id="msgs"></div>
+
+<div style="padding:5px">
+<button onclick="addEmoji('😀')">😀</button>
+<button onclick="addEmoji('😂')">😂</button>
+<button onclick="addEmoji('❤️')">❤️</button>
+<button onclick="addEmoji('👍')">👍</button>
+<button onclick="addEmoji('🔥')">🔥</button>
+</div>
+
+<div class="chat-input">
+<input id="msg" placeholder="Type message...">
+<input type="file" id="file">
+<button onclick="startRec()">🎤</button>
+<button onclick="send()">Send</button>
+</div>
+</div>
+</div>
+
+<audio id="ping">
+<source src="https://assets.mixkit.co/sfx/preview/mixkit-message-pop-alert-2354.mp3">
+</audio>
+
+<script>
+/* 🔥 PUT YOUR FIREBASE CONFIG */
+const firebaseConfig = {
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  databaseURL: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+const storage=firebase.storage();
+
+let me=null;
+let currentRoom="global";
+let typingRef=null;
+
+/* LOGIN */
+function login(){
+const n=name.value.trim();
+if(!n) return alert("Enter name");
+me=n;
+auth.style.display="none";
+chat.style.display="flex";
+
+db.ref("users/"+me).set({online:true});
+db.ref("users/"+me).onDisconnect().remove();
+
+loadUsers();
+loadMessages();
+watchTyping();
+}
+
+/* USERS */
+function loadUsers(){
+db.ref("users").on("value",snap=>{
+let html="";
+snap.forEach(s=>{
+const u=s.key;
+html+=`<div class="user" onclick="privateChat('${u}')">${u}</div>`;
+});
+users.innerHTML=html;
+});
+}
+
+/* PRIVATE CHAT */
+function privateChat(u){
+if(u===me) return;
+currentRoom=[me,u].sort().join("_");
+chatWith.innerText="Chat with "+u;
+loadMessages();
+watchTyping();
+}
+
+/* SEND */
+async function send(){
+const text=msg.value.trim();
+const fileObj=file.files[0];
+if(!text && !fileObj) return;
+
+let fileURL=null;
+
+if(fileObj){
+const ref=storage.ref("files/"+Date.now()+fileObj.name);
+await ref.put(fileObj);
+fileURL=await ref.getDownloadURL();
+}
+
+const msgRef=db.ref("messages/"+currentRoom).push();
+msgRef.set({user:me,text:text||"",file:fileURL||"",time:Date.now(),seen:false});
+
+msg.value="";
+file.value="";
+}
+
+/* LOAD MSG */
+function loadMessages(){
+db.ref("messages/"+currentRoom).off();
+db.ref("messages/"+currentRoom).on("value",snap=>{
+msgs.innerHTML="";
+snap.forEach(s=>{
+const m=s.val();
+
+if(m.user!==me){
+db.ref("messages/"+currentRoom+"/"+s.key+"/seen").set(true);
+}
+
+let seenMark=(m.user===me && m.seen)?" ✔✔":"";
+let content="<b>"+m.user+":</b> "+m.text+seenMark;
+
+if(m.voice){
+content+=`<br><audio controls src="${m.file}"></audio>`;
+}else if(m.file){
+content+=`<br><a href="${m.file}" target="_blank">📎 File</a>`;
+}
+
+const div=document.createElement("div");
+div.className="msg "+(m.user===me?"me":"other");
+div.innerHTML=content;
+msgs.appendChild(div);
+
+if(m.user!==me) ping.play();
+});
+msgs.scrollTop=msgs.scrollHeight;
+});
+}
+
+/* TYPING */
+msg.addEventListener("input",()=>{
+if(!typingRef) typingRef=db.ref("typing/"+currentRoom+"/"+me);
+typingRef.set(true);
+setTimeout(()=>typingRef.set(false),1500);
+});
+
+function watchTyping(){
+db.ref("typing/"+currentRoom).off();
+db.ref("typing/"+currentRoom).on("value",snap=>{
+let txt="";
+snap.forEach(s=>{
+if(s.key!==me && s.val()===true){
+txt=s.key+" is typing...";
+}
+});
+typing.innerText=txt;
+});
+}
+
+/* EMOJI */
+function addEmoji(e){
+msg.value+=e;
+msg.focus();
+}
+
+/* VOICE */
+let recorder,audioChunks=[];
+async function startRec(){
+const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+recorder=new MediaRecorder(stream);
+recorder.ondataavailable=e=>audioChunks.push(e.data);
+recorder.onstop=async()=>{
+const blob=new Blob(audioChunks,{type:'audio/mp3'});
+audioChunks=[];
+const ref=storage.ref("voice/"+Date.now()+".mp3");
+await ref.put(blob);
+const url=await ref.getDownloadURL();
+db.ref("messages/"+currentRoom).push({
+user:me,text:"",file:url,voice:true,time:Date.now(),seen:false
+});
+};
+recorder.start();
+setTimeout(()=>recorder.stop(),4000);
+}
+
+/* DARK */
+function toggleDark(){
+document.body.classList.toggle("dark");
+}
+
+/* LOGOUT */
+function logout(){location.reload();}
+
+/* ENTER SEND */
+msg.addEventListener("keypress",e=>{if(e.key==="Enter") send();});
+</script>
+</body>
+</html>
