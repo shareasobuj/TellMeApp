@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TellMeApp Pro v2</title>
+<title>TellMeApp Pro Final</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -13,16 +13,14 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:Arial, sans-serif}
-body{background:#f0f2f5;transition:.3s;display:flex;flex-direction:column;min-height:100vh}
-
-/* AUTH */
+body{background:#f0f2f5;display:flex;flex-direction:column;min-height:100vh;transition:.3s}
 .auth{background:#fff;padding:25px;border-radius:12px;width:90%;max-width:350px;box-shadow:0 10px 25px rgba(0,0,0,.2);margin:50px auto;transition:.3s}
 .auth input,.chat-input input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:1px solid #ccc}
 .auth button{width:100%;padding:10px;margin-top:8px;border:none;border-radius:8px;background:#5865f2;color:#fff;font-weight:600;cursor:pointer}
 .switch{font-size:13px;color:#5865f2;cursor:pointer;text-align:center;margin-top:10px}
 
 /* Chat */
-.chat{display:none;flex:1;display:flex;width:100%;max-width:1200px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;flex-direction:row;box-shadow:0 10px 25px rgba(0,0,0,.15)}
+.chat{display:none;flex:1;flex-direction:row;width:100%;max-width:1200px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,.15)}
 .sidebar{width:25%;background:#f5f6fa;padding:10px;overflow-y:auto;min-width:200px;transition:.3s}
 .chatbox{flex:1;display:flex;flex-direction:column}
 .topbar{background:#5865f2;color:#fff;padding:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
@@ -37,6 +35,7 @@ body{background:#f0f2f5;transition:.3s;display:flex;flex-direction:column;min-he
 .user{padding:8px;background:#fff;margin-bottom:6px;border-radius:6px;cursor:pointer;transition:.2s}
 .user:hover{background:#dcdde1}
 #typing{font-size:12px;color:#999;padding-left:10px;margin-bottom:5px}
+.emoji-row{padding:5px;display:flex;gap:5px;flex-wrap:wrap}
 
 /* Dark mode */
 .dark{background:#111;color:#fff}
@@ -47,9 +46,6 @@ body{background:#f0f2f5;transition:.3s;display:flex;flex-direction:column;min-he
 .dark .msg.other{background:#2c2f33;color:#fff}
 .dark .chat-input input{background:#222;color:#fff;border:1px solid #444}
 .dark .chat-input button{background:#7289da}
-
-/* Emoji row */
-.emoji-row{padding:5px;display:flex;gap:5px;flex-wrap:wrap}
 
 /* Responsive */
 @media(max-width:900px){
@@ -114,13 +110,13 @@ body{background:#f0f2f5;transition:.3s;display:flex;flex-direction:column;min-he
 <script>
 /* 🔥 Firebase config */
 const firebaseConfig = {
-  apiKey: "AIzaSyDcndhppj9OvfLZ3AFqlbiiiiPc51SM1Z8",
-  authDomain: "tellmeapp-622bc.firebaseapp.com",
-  projectId: "tellmeapp-622bc",
-  storageBucket: "tellmeapp-622bc.firebasestorage.app",
-  messagingSenderId: "689055616169",
-  appId: "1:689055616169:web:0d5723247079480197adb8",
-  measurementId: "G-WS1C757NC9"
+  apiKey: "PASTE_HERE",
+  authDomain: "PASTE_HERE",
+  databaseURL: "PASTE_HERE",
+  projectId: "PASTE_HERE",
+  storageBucket: "PASTE_HERE",
+  messagingSenderId: "PASTE_HERE",
+  appId: "PASTE_HERE"
 };
 firebase.initializeApp(firebaseConfig);
 const authFB=firebase.auth();
@@ -150,6 +146,7 @@ authFB.signInWithEmailAndPassword(e,p).catch(err=>alert(err.message));
 }else{
 authFB.createUserWithEmailAndPassword(e,p).catch(err=>alert(err.message));
 }
+}
 
 /* AUTH STATE */
 authFB.onAuthStateChanged(user=>{
@@ -167,7 +164,7 @@ watchTyping();
 }
 });
 
-/* USERS */
+/* Load users */
 function loadUsers(){
 db.ref("users").on("value",snap=>{
 let html="";
@@ -179,57 +176,47 @@ users.innerHTML=html;
 });
 }
 
-/* PRIVATE CHAT */
+/* Private chat */
 function privateChat(u){
-if(u===me){
-currentRoom="global";
-chatWith.innerText="Global Chat";
-}else{
-currentRoom=[me,u].sort().join("_");
-chatWith.innerText="Chat with "+u;
-}
+if(u===me){currentRoom="global";chatWith.innerText="Global Chat";}
+else{currentRoom=[me,u].sort().join("_");chatWith.innerText="Chat with "+u;}
 loadMessages();
 watchTyping();
 }
 
-/* SEND */
+/* Send message */
 async function send(){
 const text=msg.value.trim();
 const fileObj=file.files[0];
 if(!text && !fileObj) return;
 
-let fileURL=null;
+let fileURL="";
 let isVoice=false;
 
 if(fileObj){
-const reader = new FileReader();
-reader.onload = async e=>{
-fileURL = e.target.result;
-const msgRef=db.ref("messages/"+currentRoom).push();
-msgRef.set({user:me,text:text||"",file:fileURL,voice:isVoice,time:Date.now(),seen:false});
-msg.value="";file.value="";
-};
-reader.readAsDataURL(fileObj);
-}else{
-const msgRef=db.ref("messages/"+currentRoom).push();
-msgRef.set({user:me,text:text||"",file:"",voice:isVoice,time:Date.now(),seen:false});
-msg.value="";
-file.value="";
-}
+const ref=storage.ref("files/"+Date.now()+"_"+fileObj.name);
+await ref.put(fileObj);
+fileURL=await ref.getDownloadURL();
 }
 
-/* LOAD MSG */
+const msgRef=db.ref("messages/"+currentRoom).push();
+msgRef.set({user:me,text:text,file:fileURL,voice:isVoice,time:Date.now(),seen:false});
+
+msg.value=""; file.value="";
+}
+
+/* Load messages */
 function loadMessages(){
 db.ref("messages/"+currentRoom).off();
 db.ref("messages/"+currentRoom).on("value",snap=>{
 msgs.innerHTML="";
 snap.forEach(s=>{
 const m=s.val();
-if(m.user!==me){db.ref("messages/"+currentRoom+"/"+s.key+"/seen").set(true);}
+if(m.user!==me) db.ref("messages/"+currentRoom+"/"+s.key+"/seen").set(true);
 let seenMark=(m.user===me && m.seen)?" ✔✔":"";
 let content="<b>"+m.user+":</b> "+m.text+seenMark;
-if(m.voice){content+=`<br><audio controls src="${m.file}"></audio>`;}
-else if(m.file){content+=`<br><img src="${m.file}" style="max-width:200px;border-radius:8px;">`;}
+if(m.voice) content+=`<br><audio controls src="${m.file}"></audio>`;
+else if(m.file) content+=`<br><img src="${m.file}" style="max-width:200px;border-radius:8px;">`;
 const div=document.createElement("div");
 div.className="msg "+(m.user===me?"me":"other");
 div.innerHTML=content;
@@ -240,7 +227,7 @@ msgs.scrollTop=msgs.scrollHeight;
 });
 }
 
-/* TYPING */
+/* Typing indicator */
 msg.addEventListener("input",()=>{
 if(!typingRef) typingRef=db.ref("typing/"+currentRoom+"/"+me);
 typingRef.set(true);
@@ -251,16 +238,16 @@ db.ref("typing/"+currentRoom).off();
 db.ref("typing/"+currentRoom).on("value",snap=>{
 let txt="";
 snap.forEach(s=>{
-if(s.key!==me && s.val()===true){txt=s.key+" is typing...";}
+if(s.key!==me && s.val()===true) txt=s.key+" is typing...";
 });
 typing.innerText=txt;
 });
 }
 
-/* EMOJI */
+/* Emoji */
 function addEmoji(e){msg.value+=e;msg.focus();}
 
-/* VOICE */
+/* Voice recorder */
 let recorder,audioChunks=[];
 async function startRec(){
 const stream=await navigator.mediaDevices.getUserMedia({audio:true});
@@ -269,25 +256,22 @@ recorder.ondataavailable=e=>audioChunks.push(e.data);
 recorder.onstop=async()=>{
 const blob=new Blob(audioChunks,{type:'audio/mp3'});
 audioChunks=[];
-const reader = new FileReader();
-reader.onload = async ev=>{
-const url=ev.target.result;
-const msgRef=db.ref("messages/"+currentRoom).push();
-msgRef.set({user:me,text:"",file:url,voice:true,time:Date.now(),seen:false});
-};
-reader.readAsDataURL(blob);
+const ref=storage.ref("voice/"+Date.now()+".mp3");
+await ref.put(blob);
+const url=await ref.getDownloadURL();
+db.ref("messages/"+currentRoom).push({user:me,text:"",file:url,voice:true,time:Date.now(),seen:false});
 };
 recorder.start();
 setTimeout(()=>recorder.stop(),4000);
 }
 
-/* DARK MODE */
+/* Dark mode */
 function toggleDark(){document.body.classList.toggle("dark");}
 
-/* LOGOUT */
+/* Logout */
 function logout(){authFB.signOut();location.reload();}
 
-/* ENTER SEND */
+/* Enter send */
 msg.addEventListener("keypress",e=>{if(e.key==="Enter") send();});
 </script>
 </body>
